@@ -1,5 +1,3 @@
-import { useState } from 'react'
-
 export type FractalType = 'mandelbrot' | 'julia' | null
 export type ViewerMode = 'fractal' | 'burningShip'
 
