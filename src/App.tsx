@@ -25,7 +25,7 @@ function App() {
       )}
       {viewerMode === 'fractal' && fractalType === 'julia' && (
         <div style={{ paddingTop: '60px', minHeight: '100vh', background: 'black' }}>
-          <Julia width={window.innerWidth} height={window.innerHeight} maxIterations={200} cRe={-0.8} cIm={0.156155} />
+          <Julia width={window.innerWidth} height={window.innerHeight} maxIterations={200} />
         </div>
       )}
       {viewerMode === 'burningShip' && (

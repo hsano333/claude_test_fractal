@@ -41,18 +41,37 @@ export default function Julia({
     cIm: defaultCIm,
   })
 
-  // Auto-vary state: which parameter and direction
+  // State for auto-vary functionality
   const [autoVaryParam, setAutoVaryParam] = useState<AutoVaryParam>(null)
   const [autoVaryDirection, setAutoVaryDirection] = useState<Direction>(1)
+
+  // Helper function to increment/decrement parameter by 0.0002
+  const adjustParameter = (param: keyof ParameterState, direction: 1 | -1) => {
+    setParams((p) => {
+      const currentValue = p[param]
+      let newValue = currentValue + (direction === 1 ? 0.0002 : -0.0002)
+
+      // Clamp values - 10-1000 for maxIterations, -1.5 to 1.5 for cRe/cIm
+      if (param === 'maxIterations') {
+        newValue = Math.max(10, Math.min(1000, newValue))
+      } else {
+        newValue = Math.max(-1.5, Math.min(1.5, newValue))
+      }
+
+      return { ...p, [param]: newValue }
+    })
+  }
 
   // Auto-vary effect
   useEffect(() => {
     if (!autoVaryParam) return
 
-    const intervalId = setInterval(() => {
+    const interval = setInterval(() => {
       setParams((p) => {
-        const currentValue = p[autoVaryParam!]
-        let newValue = currentValue + (autoVaryDirection === 1 ? 0.0002 : -0.0002)
+        const currentValue = p[autoVaryParam]
+        // Use step 1 for maxIterations, 0.0002 for cRe/cIm
+        const step = autoVaryParam === 'maxIterations' ? 1 : 0.0002
+        let newValue = currentValue + (autoVaryDirection === 1 ? step : -step)
 
         // Clamp values
         if (autoVaryParam === 'maxIterations') {
@@ -61,11 +80,11 @@ export default function Julia({
           newValue = Math.max(-1.5, Math.min(1.5, newValue))
         }
 
-        return { ...p, [autoVaryParam!]: newValue }
+        return { ...p, [autoVaryParam]: newValue }
       })
-    }, 1000) // 1 fps
+    }, 10) // Update every 10ms
 
-    return () => clearInterval(intervalId)
+    return () => clearInterval(interval)
   }, [autoVaryParam, autoVaryDirection])
 
   useEffect(() => {
@@ -476,6 +495,25 @@ export default function Julia({
           </label>
         </div>
 
+        {/* Stop Auto-Vary Button */}
+        <button
+          onClick={() => {
+            setAutoVaryParam(null)
+            setAutoVaryDirection(1)
+          }}
+          style={{
+            padding: '0.5rem 1rem',
+            background: autoVaryParam !== null ? '#c94a4a' : '#4a4a6e',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            marginLeft: 'auto',
+          }}
+        >
+          {autoVaryParam !== null ? 'Stop Auto-Vary' : 'Auto-Vary Off'}
+        </button>
+
         {/* Reset Button */}
         <button
           onClick={() => {
@@ -494,7 +532,6 @@ export default function Julia({
             border: 'none',
             borderRadius: '4px',
             cursor: 'pointer',
-            marginLeft: 'auto',
           }}
         >
           Reset
