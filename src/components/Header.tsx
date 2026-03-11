@@ -6,9 +6,10 @@ interface HeaderProps {
   onModeChange: (mode: ViewerMode) => void
   type: FractalType
   mode: ViewerMode
+  zoomLevel: number
 }
 
-export default function Header({ onTypeChange, onModeChange, type, mode }: HeaderProps) {
+export default function Header({ onTypeChange, onModeChange, type, mode, zoomLevel }: HeaderProps) {
   return (
     <header
       style={{
@@ -27,7 +28,12 @@ export default function Header({ onTypeChange, onModeChange, type, mode }: Heade
       <h1 style={{ margin: 0, fontSize: '20px', color: '#fff' }}>
         {mode === 'fractal' ? 'Fractal Viewer' : 'Burning Ship'}
       </h1>
-      <div style={{ display: 'flex', gap: '10px' }}>
+      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        {mode === 'fractal' && type === 'mandelbrot' && (
+          <span style={{ color: '#888', fontSize: '12px', padding: '4px 8px', background: '#333', borderRadius: '4px' }}>
+            🖱️ Scroll to zoom ({zoomLevel.toFixed(1)}x)
+          </span>
+        )}
         <button
           onClick={() => onModeChange(mode === 'fractal' ? 'burningShip' : 'fractal')}
           style={{

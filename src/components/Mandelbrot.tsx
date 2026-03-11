@@ -83,9 +83,10 @@ interface Props {
   height?: number
   maxIterations?: number
   colorScheme?: number
+  onZoomChange?: (scale: number) => void
 }
 
-export default function Mandelbrot({ width = 800, height = 600, maxIterations = 100, colorScheme = 0 }: Props) {
+export default function Mandelbrot({ width = 800, height = 600, maxIterations = 100, colorScheme = 0, onZoomChange }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   // View state: center point and zoom scale
@@ -166,6 +167,13 @@ export default function Mandelbrot({ width = 800, height = 600, maxIterations = 
   useEffect(() => {
     draw()
   }, [draw])
+
+  // Notify parent of zoom changes
+  useEffect(() => {
+    if (onZoomChange) {
+      onZoomChange(view.scale)
+    }
+  }, [view.scale, onZoomChange])
 
   // Handle zoom with mouse wheel
   const handleWheel = useCallback((e: React.WheelEvent) => {

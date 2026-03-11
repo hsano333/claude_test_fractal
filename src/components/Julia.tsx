@@ -14,6 +14,9 @@ interface ParameterState {
   cIm: number
 }
 
+type AutoVaryParam = 'maxIterations' | 'cRe' | 'cIm' | null
+type Direction = 1 | -1
+
 const PRESETS = [
   { name: 'デフォルト', cRe: -0.8, cIm: 0.156155 },
   { name: 'ドラゴン', cRe: 0.2835, cIm: 0.7645 },
@@ -25,7 +28,7 @@ const PRESETS = [
 export default function Julia({
   width = 800,
   height = 600,
-  maxIterations: defaultMaxIterations = 100,
+  maxIterations: defaultMaxIterations = 1000,
   cRe: defaultCRe = -0.8,
   cIm: defaultCIm = 0.156155,
 }: JuliaProps) {
@@ -37,6 +40,33 @@ export default function Julia({
     cRe: defaultCRe,
     cIm: defaultCIm,
   })
+
+  // Auto-vary state: which parameter and direction
+  const [autoVaryParam, setAutoVaryParam] = useState<AutoVaryParam>(null)
+  const [autoVaryDirection, setAutoVaryDirection] = useState<Direction>(1)
+
+  // Auto-vary effect
+  useEffect(() => {
+    if (!autoVaryParam) return
+
+    const intervalId = setInterval(() => {
+      setParams((p) => {
+        const currentValue = p[autoVaryParam!]
+        let newValue = currentValue + (autoVaryDirection === 1 ? 0.0002 : -0.0002)
+
+        // Clamp values
+        if (autoVaryParam === 'maxIterations') {
+          newValue = Math.max(10, Math.min(1000, newValue))
+        } else {
+          newValue = Math.max(-1.5, Math.min(1.5, newValue))
+        }
+
+        return { ...p, [autoVaryParam!]: newValue }
+      })
+    }, 1000) // 1 fps
+
+    return () => clearInterval(intervalId)
+  }, [autoVaryParam, autoVaryDirection])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -56,8 +86,12 @@ export default function Julia({
     const imageData = ctx.createImageData(w, h)
     const data = imageData.data
 
-    // Complex plane boundaries for Julia set
-    const xMin = -2, xMax = 2, yMin = -2, yMax = 2
+    // Complex plane boundaries - centered on c value
+    const viewSize = 2
+    const xMin = params.cRe - viewSize
+    const xMax = params.cRe + viewSize
+    const yMin = params.cIm - viewSize
+    const yMax = params.cIm + viewSize
 
     for (let py = 0; py < h; py++) {
       for (let px = 0; px < w; px++) {
@@ -94,7 +128,7 @@ export default function Julia({
     }
 
     ctx.putImageData(imageData, 0, 0)
-  }, [width, height, params])
+  }, [width, height, params, autoVaryParam])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -121,20 +155,76 @@ export default function Julia({
             }}
           >
             <span>Max Iterations: {params.maxIterations}</span>
-            <input
-              type="range"
-              min="10"
-              max="500"
-              value={params.maxIterations}
-              onChange={(e) =>
-                setParams((p) => ({ ...p, maxIterations: Number(e.target.value) }))
-              }
-              style={{ cursor: 'grabber', marginBottom: '0.25rem' }}
-            />
+            <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '0.25rem' }}>
+              <button
+                onClick={() => {
+                  setAutoVaryParam('maxIterations')
+                  setAutoVaryDirection(1)
+                }}
+                onMouseDown={() => {
+                  setAutoVaryParam('maxIterations')
+                  setAutoVaryDirection(1)
+                }}
+                onMouseUp={() => setAutoVaryParam(null)}
+                onMouseLeave={() => setAutoVaryParam(null)}
+                onTouchStart={() => {
+                  setAutoVaryParam('maxIterations')
+                  setAutoVaryDirection(1)
+                }}
+                onTouchEnd={() => setAutoVaryParam(null)}
+                style={{
+                  padding: '0.25rem 0.5rem',
+                  background: autoVaryParam === 'maxIterations' && autoVaryDirection === 1 ? '#5a5a8e' : '#3a3a5e',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                }}
+              >
+                ▲
+              </button>
+              <input
+                type="range"
+                min="10"
+                max="1000"
+                value={params.maxIterations}
+                onChange={(e) =>
+                  setParams((p) => ({ ...p, maxIterations: Number(e.target.value) }))
+                }
+                style={{ cursor: 'grabber', flex: 1 }}
+              />
+              <button
+                onClick={() => {
+                  setAutoVaryParam('maxIterations')
+                  setAutoVaryDirection(-1)
+                }}
+                onMouseDown={() => {
+                  setAutoVaryParam('maxIterations')
+                  setAutoVaryDirection(-1)
+                }}
+                onMouseUp={() => setAutoVaryParam(null)}
+                onMouseLeave={() => setAutoVaryParam(null)}
+                onTouchStart={() => {
+                  setAutoVaryParam('maxIterations')
+                  setAutoVaryDirection(-1)
+                }}
+                onTouchEnd={() => setAutoVaryParam(null)}
+                style={{
+                  padding: '0.25rem 0.5rem',
+                  background: autoVaryParam === 'maxIterations' && autoVaryDirection === -1 ? '#5a5a8e' : '#3a3a5e',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                }}
+              >
+                ▼
+              </button>
+            </div>
             <input
               type="number"
               min="10"
-              max="500"
+              max="1000"
               value={params.maxIterations}
               onChange={(e) =>
                 setParams((p) => ({ ...p, maxIterations: Number(e.target.value) }))
@@ -163,22 +253,78 @@ export default function Julia({
             }}
           >
             <span>c (Real): {params.cRe.toFixed(4)}</span>
-            <input
-              type="range"
-              min="-2"
-              max="2"
-              step="0.001"
-              value={params.cRe}
-              onChange={(e) =>
-                setParams((p) => ({ ...p, cRe: Number(e.target.value) }))
-              }
-              style={{ cursor: 'grabber', marginBottom: '0.25rem' }}
-            />
+            <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '0.25rem' }}>
+              <button
+                onClick={() => {
+                  setAutoVaryParam('cRe')
+                  setAutoVaryDirection(1)
+                }}
+                onMouseDown={() => {
+                  setAutoVaryParam('cRe')
+                  setAutoVaryDirection(1)
+                }}
+                onMouseUp={() => setAutoVaryParam(null)}
+                onMouseLeave={() => setAutoVaryParam(null)}
+                onTouchStart={() => {
+                  setAutoVaryParam('cRe')
+                  setAutoVaryDirection(1)
+                }}
+                onTouchEnd={() => setAutoVaryParam(null)}
+                style={{
+                  padding: '0.25rem 0.5rem',
+                  background: autoVaryParam === 'cRe' && autoVaryDirection === 1 ? '#5a5a8e' : '#3a3a5e',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                }}
+              >
+                ▲
+              </button>
+              <input
+                type="range"
+                min="-1.5"
+                max="1.5"
+                step="0.0001"
+                value={params.cRe}
+                onChange={(e) =>
+                  setParams((p) => ({ ...p, cRe: Number(e.target.value) }))
+                }
+                style={{ cursor: 'grabber', flex: 1 }}
+              />
+              <button
+                onClick={() => {
+                  setAutoVaryParam('cRe')
+                  setAutoVaryDirection(-1)
+                }}
+                onMouseDown={() => {
+                  setAutoVaryParam('cRe')
+                  setAutoVaryDirection(-1)
+                }}
+                onMouseUp={() => setAutoVaryParam(null)}
+                onMouseLeave={() => setAutoVaryParam(null)}
+                onTouchStart={() => {
+                  setAutoVaryParam('cRe')
+                  setAutoVaryDirection(-1)
+                }}
+                onTouchEnd={() => setAutoVaryParam(null)}
+                style={{
+                  padding: '0.25rem 0.5rem',
+                  background: autoVaryParam === 'cRe' && autoVaryDirection === -1 ? '#5a5a8e' : '#3a3a5e',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                }}
+              >
+                ▼
+              </button>
+            </div>
             <input
               type="number"
-              min="-2"
-              max="2"
-              step="0.001"
+              min="-1.5"
+              max="1.5"
+              step="0.0001"
               value={params.cRe}
               onChange={(e) =>
                 setParams((p) => ({ ...p, cRe: Number(e.target.value) }))
@@ -207,22 +353,78 @@ export default function Julia({
             }}
           >
             <span>c (Imag): {params.cIm.toFixed(4)}</span>
-            <input
-              type="range"
-              min="-2"
-              max="2"
-              step="0.001"
-              value={params.cIm}
-              onChange={(e) =>
-                setParams((p) => ({ ...p, cIm: Number(e.target.value) }))
-              }
-              style={{ cursor: 'grabber', marginBottom: '0.25rem' }}
-            />
+            <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '0.25rem' }}>
+              <button
+                onClick={() => {
+                  setAutoVaryParam('cIm')
+                  setAutoVaryDirection(1)
+                }}
+                onMouseDown={() => {
+                  setAutoVaryParam('cIm')
+                  setAutoVaryDirection(1)
+                }}
+                onMouseUp={() => setAutoVaryParam(null)}
+                onMouseLeave={() => setAutoVaryParam(null)}
+                onTouchStart={() => {
+                  setAutoVaryParam('cIm')
+                  setAutoVaryDirection(1)
+                }}
+                onTouchEnd={() => setAutoVaryParam(null)}
+                style={{
+                  padding: '0.25rem 0.5rem',
+                  background: autoVaryParam === 'cIm' && autoVaryDirection === 1 ? '#5a5a8e' : '#3a3a5e',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                }}
+              >
+                ▲
+              </button>
+              <input
+                type="range"
+                min="-1.5"
+                max="1.5"
+                step="0.0001"
+                value={params.cIm}
+                onChange={(e) =>
+                  setParams((p) => ({ ...p, cIm: Number(e.target.value) }))
+                }
+                style={{ cursor: 'grabber', flex: 1 }}
+              />
+              <button
+                onClick={() => {
+                  setAutoVaryParam('cIm')
+                  setAutoVaryDirection(-1)
+                }}
+                onMouseDown={() => {
+                  setAutoVaryParam('cIm')
+                  setAutoVaryDirection(-1)
+                }}
+                onMouseUp={() => setAutoVaryParam(null)}
+                onMouseLeave={() => setAutoVaryParam(null)}
+                onTouchStart={() => {
+                  setAutoVaryParam('cIm')
+                  setAutoVaryDirection(-1)
+                }}
+                onTouchEnd={() => setAutoVaryParam(null)}
+                style={{
+                  padding: '0.25rem 0.5rem',
+                  background: autoVaryParam === 'cIm' && autoVaryDirection === -1 ? '#5a5a8e' : '#3a3a5e',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                }}
+              >
+                ▼
+              </button>
+            </div>
             <input
               type="number"
-              min="-2"
-              max="2"
-              step="0.001"
+              min="-1.5"
+              max="1.5"
+              step="0.0001"
               value={params.cIm}
               onChange={(e) =>
                 setParams((p) => ({ ...p, cIm: Number(e.target.value) }))
@@ -276,13 +478,15 @@ export default function Julia({
 
         {/* Reset Button */}
         <button
-          onClick={() =>
+          onClick={() => {
             setParams({
               maxIterations: defaultMaxIterations,
               cRe: defaultCRe,
               cIm: defaultCIm,
             })
-          }
+            setAutoVaryParam(null)
+            setAutoVaryDirection(1)
+          }}
           style={{
             padding: '0.5rem 1rem',
             background: '#4a4a6e',
