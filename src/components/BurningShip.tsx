@@ -95,10 +95,6 @@ export default function BurningShip({ width = 800, height = 600, maxIterations =
   const isPanningRef = useRef(false)
   const lastMouseRef = useRef({ x: 0, y: 0 })
 
-  // Auto-repeat for ▲/▼ buttons
-  const repeatTimerRef = useRef<NodeJS.Timeout | null>(null)
-  const repeatDirectionRef = useRef<'up' | 'down' | null>(null)
-
   // Color scheme state
   const [activeColorScheme, setActiveColorScheme] = useState(colorScheme)
 
@@ -248,50 +244,6 @@ export default function BurningShip({ width = 800, height = 600, maxIterations =
     setView({ centerX: -0.77, centerY: 0, scale: 1.5 })
     setActiveColorScheme(0)
   }, [])
-
-  // Zoom step size
-  const ZOOM_FACTOR = 1.1
-
-  // Auto-repeat zoom on ▲/▼ button hold
-  const startAutoRepeat = useCallback((direction: 'up' | 'down') => {
-    if (repeatTimerRef.current) return
-
-    repeatDirectionRef.current = direction
-
-    // Initial execution
-    setView(prev => ({
-      ...prev,
-      scale: direction === 'up' ? prev.scale * ZOOM_FACTOR : prev.scale / ZOOM_FACTOR
-    }))
-
-    // Repeat every 10ms
-    repeatTimerRef.current = setInterval(() => {
-      setView(prev => ({
-        ...prev,
-        scale: direction === 'up' ? prev.scale * ZOOM_FACTOR : prev.scale / ZOOM_FACTOR
-      }))
-    }, 10) as unknown as NodeJS.Timeout
-  }, [])
-
-  const stopAutoRepeat = useCallback(() => {
-    if (repeatTimerRef.current) {
-      clearInterval(repeatTimerRef.current)
-      repeatTimerRef.current = null
-      repeatDirectionRef.current = null
-    }
-  }, [])
-
-  const handleZoomButtonMouseDown = useCallback((direction: 'up' | 'down') => {
-    startAutoRepeat(direction)
-  }, [startAutoRepeat])
-
-  const handleZoomButtonMouseUp = useCallback(() => {
-    stopAutoRepeat()
-  }, [stopAutoRepeat])
-
-  const handleZoomButtonMouseLeave = useCallback(() => {
-    stopAutoRepeat()
-  }, [stopAutoRepeat])
 
   return (
     <div style={{ position: 'relative' }}>

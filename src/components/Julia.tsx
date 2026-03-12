@@ -45,23 +45,6 @@ export default function Julia({
   const [autoVaryParam, setAutoVaryParam] = useState<AutoVaryParam>(null)
   const [autoVaryDirection, setAutoVaryDirection] = useState<Direction>(1)
 
-  // Helper function to increment/decrement parameter by 0.0002
-  const adjustParameter = (param: keyof ParameterState, direction: 1 | -1) => {
-    setParams((p) => {
-      const currentValue = p[param]
-      let newValue = currentValue + (direction === 1 ? 0.0002 : -0.0002)
-
-      // Clamp values - 10-1000 for maxIterations, -1.5 to 1.5 for cRe/cIm
-      if (param === 'maxIterations') {
-        newValue = Math.max(10, Math.min(1000, newValue))
-      } else {
-        newValue = Math.max(-1.5, Math.min(1.5, newValue))
-      }
-
-      return { ...p, [param]: newValue }
-    })
-  }
-
   // Auto-vary effect
   useEffect(() => {
     if (!autoVaryParam) return
